@@ -1,0 +1,521 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>ИИ в психологии — Программа лекции</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400&family=Manrope:wght@500;700;800&family=Unbounded:wght@700;800;900&display=swap" rel="stylesheet" />
+
+<style>
+  :root {
+    --bg: #F2F0EB;
+    --text: #1A1A1A;
+    --text-muted: #5a5a5a;
+    --c1: #C6708F;
+    --c2: #D48D67;
+    --c3: #EE9B81;
+    --c4: #9F6590;
+    --c5: #E8BE92;
+    --accent: #D1500F;
+    --milk: rgba(255,255,255,0.55);
+    --milk-border: rgba(255,255,255,0.7);
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background-color: var(--bg);
+    color: var(--text);
+    font-family: 'Manrope', sans-serif;
+    -webkit-font-smoothing: antialiased;
+    min-height: 100vh;
+    overflow-x: hidden;
+    position: relative;
+  }
+
+  /* ── Breathing mesh background ── */
+  body::before {
+    content: "";
+    position: fixed;
+    inset: -20%;
+    z-index: 0;
+    pointer-events: none;
+    background-image:
+      radial-gradient(circle at 10% 10%,  #C6708F60 0%, transparent 75%),
+      radial-gradient(circle at 90% 10%,  #D48D6750 0%, transparent 80%),
+      radial-gradient(circle at 90% 90%,  #EE9B8150 0%, transparent 75%),
+      radial-gradient(circle at 10% 90%,  #9F659040 0%, transparent 80%),
+      radial-gradient(circle at 50% 50%,  #E8BE9240 0%, transparent 85%);
+    filter: blur(80px);
+    animation: breathing 8s cubic-bezier(0.4,0,0.2,1) infinite alternate;
+  }
+
+  /* Noise overlay */
+  body::after {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.025'/%3E%3C/svg%3E");
+    opacity: 0.4;
+  }
+
+  @keyframes breathing {
+    0%   { transform: scale(1)    translate(0%,  0%); opacity: 0.7; }
+    100% { transform: scale(1.15) translate(-2%, 2%); opacity: 1;   }
+  }
+
+  /* ── Layout ── */
+  .page {
+    position: relative;
+    z-index: 1;
+    max-width: 780px;
+    margin: 0 auto;
+    padding: 4rem 2rem 6rem;
+  }
+
+  /* ── Header ── */
+  .header {
+    margin-bottom: 3.5rem;
+    opacity: 0;
+    animation: fadeUp 0.7s ease forwards;
+  }
+
+  .mono {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.18em;
+  }
+
+  .mono.accent { color: var(--accent); }
+
+  .header-title {
+    font-family: 'Unbounded', sans-serif;
+    font-weight: 900;
+    font-size: clamp(2.8rem, 8vw, 5rem);
+    line-height: 0.9;
+    letter-spacing: -0.04em;
+    margin: 0.6rem 0 1rem;
+    color: var(--text);
+  }
+
+  .header-sub {
+    font-family: 'Manrope', sans-serif;
+    font-weight: 500;
+    font-size: 1.05rem;
+    color: var(--text-muted);
+    line-height: 1.5;
+  }
+
+  /* ── Acts list ── */
+  .acts { display: flex; flex-direction: column; gap: 1rem; }
+
+  /* ── Act card ── */
+  .act {
+    background: var(--milk);
+    border: 1px solid var(--milk-border);
+    border-radius: 20px;
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    overflow: hidden;
+    cursor: pointer;
+    transition: transform 0.3s ease, box-shadow 0.3s ease, background 0.3s ease;
+    opacity: 0;
+    animation: fadeUp 0.6s ease forwards;
+  }
+
+  .act:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 12px 40px rgba(198, 112, 143, 0.18);
+    background: rgba(255,255,255,0.68);
+  }
+
+  .act.open {
+    box-shadow: 0 8px 32px rgba(198, 112, 143, 0.14);
+  }
+
+  /* stagger */
+  .act:nth-child(1) { animation-delay: 0.15s; }
+  .act:nth-child(2) { animation-delay: 0.25s; }
+  .act:nth-child(3) { animation-delay: 0.35s; }
+  .act:nth-child(4) { animation-delay: 0.45s; }
+  .act:nth-child(5) { animation-delay: 0.55s; }
+  .act:nth-child(6) { animation-delay: 0.65s; }
+  .act:nth-child(7) { animation-delay: 0.75s; }
+
+  .act-header {
+    display: flex;
+    align-items: center;
+    gap: 1.2rem;
+    padding: 1.4rem 1.6rem;
+    user-select: none;
+  }
+
+  .act-number {
+    font-family: 'Unbounded', sans-serif;
+    font-weight: 900;
+    font-size: 1.8rem;
+    line-height: 1;
+    color: var(--accent);
+    opacity: 0.35;
+    min-width: 2.5rem;
+    transition: opacity 0.3s ease;
+  }
+
+  .act:hover .act-number,
+  .act.open .act-number {
+    opacity: 0.7;
+  }
+
+  .act-meta { flex: 1; }
+
+  .act-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.68rem;
+    color: var(--accent);
+    text-transform: uppercase;
+    letter-spacing: 0.18em;
+    margin-bottom: 0.3rem;
+  }
+
+  .act-title {
+    font-family: 'Unbounded', sans-serif;
+    font-weight: 800;
+    font-size: 1.05rem;
+    letter-spacing: -0.02em;
+    line-height: 1.2;
+    color: var(--text);
+  }
+
+  .act-arrow {
+    font-size: 1rem;
+    color: var(--accent);
+    opacity: 0.5;
+    transition: transform 0.35s cubic-bezier(0.4,0,0.2,1), opacity 0.3s ease;
+    flex-shrink: 0;
+  }
+
+  .act.open .act-arrow {
+    transform: rotate(90deg);
+    opacity: 0.9;
+  }
+
+  /* ── Collapsible body ── */
+  .act-body {
+    display: grid;
+    grid-template-rows: 0fr;
+    transition: grid-template-rows 0.4s cubic-bezier(0.4,0,0.2,1);
+  }
+
+  .act.open .act-body {
+    grid-template-rows: 1fr;
+  }
+
+  .act-body-inner {
+    overflow: hidden;
+  }
+
+  .act-content {
+    padding: 0 1.6rem 1.6rem 5rem;
+    font-size: 0.95rem;
+    line-height: 1.6;
+    color: var(--text-muted);
+    border-top: 1px solid rgba(255,255,255,0.6);
+    padding-top: 1rem;
+    margin-top: 0;
+  }
+
+  .act-content p {
+    font-family: 'Manrope', sans-serif;
+    font-weight: 500;
+    font-size: 0.95rem;
+    line-height: 1.6;
+    color: var(--text-muted);
+    margin-bottom: 0.5rem;
+  }
+
+  .act-content ul {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+    margin-top: 0.4rem;
+  }
+
+  .act-content ul li {
+    font-family: 'Manrope', sans-serif;
+    font-weight: 500;
+    font-size: 0.92rem;
+    color: var(--text-muted);
+    padding-left: 1.2rem;
+    position: relative;
+    line-height: 1.5;
+  }
+
+  .act-content ul li::before {
+    content: "›";
+    position: absolute;
+    left: 0;
+    color: var(--accent);
+    font-weight: 700;
+  }
+
+  .demo-tag {
+    display: inline-block;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.6rem;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    background: rgba(209, 80, 15, 0.1);
+    color: var(--accent);
+    border: 1px solid rgba(209, 80, 15, 0.2);
+    border-radius: 4px;
+    padding: 1px 5px;
+    margin-left: 6px;
+    vertical-align: middle;
+    position: relative;
+    top: -1px;
+  }
+
+  /* ── Footer cards ── */
+  .footer-cards {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    margin-top: 1rem;
+  }
+
+  .footer-card {
+    background: rgba(209, 80, 15, 0.06);
+    border: 1px solid rgba(209, 80, 15, 0.15);
+    border-radius: 16px;
+    padding: 1.2rem 1.6rem;
+    opacity: 0;
+    animation: fadeUp 0.6s ease 0.8s forwards;
+  }
+
+  .footer-card .act-label { margin-bottom: 0.4rem; }
+
+  .footer-card p {
+    font-family: 'Manrope', sans-serif;
+    font-weight: 500;
+    font-size: 0.92rem;
+    color: var(--text-muted);
+    line-height: 1.55;
+  }
+
+  /* ── Footer sig ── */
+  .sig {
+    margin-top: 3.5rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    opacity: 0;
+    animation: fadeUp 0.6s ease 0.95s forwards;
+  }
+
+  .sig-line {
+    height: 1px;
+    flex: 1;
+    background: linear-gradient(to right, rgba(198,112,143,0.3), transparent);
+  }
+
+  .sig-text {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    opacity: 0.6;
+  }
+
+  /* ── Animation ── */
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(16px); }
+    to   { opacity: 1; transform: translateY(0);    }
+  }
+
+  /* ── Responsive ── */
+  @media (max-width: 540px) {
+    .page { padding: 2.5rem 1.2rem 4rem; }
+    .act-content { padding-left: 1.6rem; }
+    .act-number { font-size: 1.3rem; min-width: 2rem; }
+    .act-title { font-size: 0.95rem; }
+    .header-title { font-size: 2.5rem; }
+  }
+</style>
+</head>
+<body>
+
+<div class="page">
+
+  <!-- Header -->
+  <div class="header">
+    <div class="mono accent">Онлайн-лекция · Март 2026</div>
+    <h1 class="header-title">ИИ в<br/>психологии</h1>
+    <p class="header-sub">Программа лекции для участников.<br/>Нажмите на акт — раскроется содержание.</p>
+  </div>
+
+  <!-- Acts -->
+  <div class="acts">
+
+    <div class="act" onclick="toggle(this)">
+      <div class="act-header">
+        <div class="act-number">01</div>
+        <div class="act-meta">
+          <div class="act-label">Акт 1</div>
+          <div class="act-title">Что такое LLM</div>
+        </div>
+        <div class="act-arrow">›</div>
+      </div>
+      <div class="act-body">
+        <div class="act-body-inner">
+          <div class="act-content">
+            <ul>
+              <li>Как работает языковая модель и что влияет на качество результата</li>
+              <li>Карта инструментов: ChatGPT, Claude, Gemini и другие</li>
+              <li>Три режима работы: чат, коворкинг, код</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="act" onclick="toggle(this)">
+      <div class="act-header">
+        <div class="act-number">02</div>
+        <div class="act-meta">
+          <div class="act-label">Акт 2</div>
+          <div class="act-title">Майндсет и промпты</div>
+        </div>
+        <div class="act-arrow">›</div>
+      </div>
+      <div class="act-body">
+        <div class="act-body-inner">
+          <div class="act-content">
+            <ul>
+              <li>Почему качество запроса = качество ответа</li>
+              <li>Калькулятор промпта <span class="demo-tag">демо</span></li>
+              <li>Построитель исследовательского запроса <span class="demo-tag">демо</span></li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="act" onclick="toggle(this)">
+      <div class="act-header">
+        <div class="act-number">03</div>
+        <div class="act-meta">
+          <div class="act-label">Акт 3</div>
+          <div class="act-title">Три слоя возможностей</div>
+        </div>
+        <div class="act-arrow">›</div>
+      </div>
+      <div class="act-body">
+        <div class="act-body-inner">
+          <div class="act-content">
+            <p>Мышление</p>
+            <ul>
+              <li>Концептуализация <span class="demo-tag">демо</span></li>
+              <li>Рефлексия после сессии</li>
+              <li>Самообразование <span class="demo-tag">демо</span></li>
+              <li>Супервизия между встречами</li>
+            </ul>
+            <p style="margin-top:1rem;">Действие</p>
+            <ul>
+              <li>Упражнение → PDF → пост <span class="demo-tag">демо</span></li>
+              <li>PDF-опросник → Excel</li>
+              <li>Текстовая рутина</li>
+            </ul>
+            <p style="margin-top:1rem;">Расширение</p>
+            <ul>
+              <li>HTML-визуализации для клиентов <span class="demo-tag">демо</span></li>
+              <li>Генерация изображений <span class="demo-tag">демо</span></li>
+              <li>Презентация на коде <span class="demo-tag">демо</span></li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="act" onclick="toggle(this)">
+      <div class="act-header">
+        <div class="act-number">04</div>
+        <div class="act-meta">
+          <div class="act-label">Акт 4</div>
+          <div class="act-title">Айсберг</div>
+        </div>
+        <div class="act-arrow">›</div>
+      </div>
+      <div class="act-body">
+        <div class="act-body-inner">
+          <div class="act-content">
+            <p>Всё выше — режим чата. Что под водой:</p>
+            <ul>
+              <li>Коворкинг, агенты, код</li>
+              <li>3D-модели как образовательный инструмент</li>
+              <li>Реализация образовательного мини-проекта</li>
+              <li>Сгенерированное видео как психотерапевтический инструмент</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="act" onclick="toggle(this)">
+      <div class="act-header">
+        <div class="act-number">05</div>
+        <div class="act-meta">
+          <div class="act-label">Акт 5</div>
+          <div class="act-title">Безопасность данных</div>
+        </div>
+        <div class="act-arrow">›</div>
+      </div>
+      <div class="act-body">
+        <div class="act-body-inner">
+          <div class="act-content">
+            <ul>
+              <li>Облако vs локально — куда уходят данные</li>
+              <li>Чек-лист безопасности для клинической практики</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /acts -->
+
+  <!-- Footer cards -->
+  <div class="footer-cards">
+    <div class="footer-card">
+      <div class="act-label">Вопросы и разбор</div>
+      <p>Место для любых вопросов по реализации ваших конкретных целей.</p>
+    </div>
+    <div class="footer-card">
+      <div class="act-label">Раздаточные материалы</div>
+      <p>После лекции все участники получат шпаргалки по всему, что обсуждали.</p>
+    </div>
+  </div>
+
+  <!-- Sig -->
+  <div class="sig">
+    <div class="sig-line"></div>
+    <div class="sig-text">@kskuzina · RHIZOME Project</div>
+  </div>
+
+</div><!-- /page -->
+
+<script>
+  function toggle(el) {
+    el.classList.toggle('open');
+  }
+</script>
+
+</body>
+</html>
