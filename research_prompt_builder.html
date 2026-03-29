@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Промпт для рисёрча</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400&family=Manrope:wght@500;700;800&family=Unbounded:wght@700;800;900&display=swap');
+
+  :root {
+    --bg: #F2F0EB;
+    --text: #1A1A1A;
+    --text-muted: #3d3d3d;
+    --text-dim: #6b6b6b;
+    --accent: #B8470B;
+    --surface: rgba(255,255,255,0.55);
+    --surface-active: rgba(255,255,255,0.8);
+    --border: rgba(0,0,0,0.08);
+    --green: #2E7D32;
+    --red: #9E1A46;
+    --c1: #9E1A4640; --c2: #B8470B30; --c3: #E26A4A30; --c4: #D99A5B25; --c5: #C84C5525;
+    --radius: 14px;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Manrope', sans-serif;
+    background-color: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    padding: 32px 24px 80px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+    position: relative;
+    overflow-x: hidden;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.025'/%3E%3C/svg%3E");
+  }
+
+  body::before {
+    content: "";
+    position: fixed;
+    top: -20%; left: -20%; right: -20%; bottom: -20%;
+    z-index: -1; pointer-events: none;
+    background-image:
+      radial-gradient(circle at 10% 10%, var(--c1) 0%, transparent 75%),
+      radial-gradient(circle at 90% 10%, var(--c2) 0%, transparent 80%),
+      radial-gradient(circle at 90% 90%, var(--c3) 0%, transparent 75%),
+      radial-gradient(circle at 10% 90%, var(--c4) 0%, transparent 80%),
+      radial-gradient(circle at 50% 50%, var(--c5) 0%, transparent 85%);
+    filter: blur(80px);
+    will-change: transform, opacity;
+    animation: breathing 8s cubic-bezier(0.4, 0, 0.2, 1) infinite alternate;
+  }
+
+  @keyframes breathing {
+    0%   { transform: scale(1) translate(0%, 0%); opacity: 0.7; }
+    100% { transform: scale(1.15) translate(-2%, 2%); opacity: 1; }
+  }
+
+  .container { max-width: 1060px; margin: 0 auto; }
+
+  header { text-align: center; margin-bottom: 36px; }
+
+  h1 {
+    font-family: 'Unbounded', sans-serif;
+    font-weight: 900; font-size: 2.2rem;
+    line-height: 0.95; letter-spacing: -0.04em;
+    text-transform: lowercase; color: var(--text);
+    margin-bottom: 10px;
+  }
+
+  .subtitle {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.76rem; color: var(--text-dim);
+    text-transform: uppercase; letter-spacing: 0.12em;
+  }
+
+  /* Ingredients */
+  .builder { margin-bottom: 28px; }
+
+  .builder-label {
+    font-weight: 800; font-size: 1.05rem;
+    margin-bottom: 12px; color: var(--text);
+  }
+
+  .ingredients {
+    display: flex; flex-wrap: wrap; gap: 7px;
+  }
+
+  .ingredient {
+    padding: 9px 16px; border-radius: 12px;
+    border: 1.5px solid var(--border);
+    background: var(--surface);
+    font-size: 0.85rem; font-weight: 500;
+    color: var(--text-muted); cursor: pointer;
+    transition: all 0.3s ease;
+    backdrop-filter: blur(8px); user-select: none;
+  }
+
+  .ingredient:hover { border-color: rgba(0,0,0,0.2); background: var(--surface-active); }
+
+  .ingredient.active {
+    background: rgba(184,71,11,0.1);
+    border-color: var(--accent);
+    color: var(--accent); font-weight: 700;
+  }
+
+  .ingredient .check {
+    display: inline-block; width: 15px; height: 15px;
+    border-radius: 4px; border: 1.5px solid var(--border);
+    vertical-align: middle; margin-right: 7px;
+    transition: all 0.2s ease; position: relative;
+  }
+
+  .ingredient.active .check {
+    background: var(--accent); border-color: var(--accent);
+  }
+
+  .ingredient.active .check::after {
+    content: '✓'; color: white; font-size: 0.65rem;
+    position: absolute; top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+  }
+
+  /* Columns */
+  .columns {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 14px;
+  }
+
+  .col {
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px; backdrop-filter: blur(12px);
+    transition: all 0.4s ease;
+    display: flex; flex-direction: column;
+  }
+
+  .col-header {
+    display: flex; align-items: center; gap: 8px; margin-bottom: 12px;
+  }
+
+  .col-icon { font-size: 1.3rem; }
+
+  .col-title {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.7rem; text-transform: uppercase;
+    letter-spacing: 0.1em; color: var(--text-dim);
+  }
+
+  .display-box {
+    background: rgba(0,0,0,0.03);
+    border-radius: 10px; padding: 16px;
+    font-size: 0.84rem; line-height: 1.6;
+    color: var(--text-muted); flex: 1;
+    transition: all 0.4s ease; font-weight: 500;
+    overflow-y: auto; max-height: 520px;
+  }
+
+  .display-box::-webkit-scrollbar { width: 4px; }
+  .display-box::-webkit-scrollbar-track { background: transparent; }
+  .display-box::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.1); border-radius: 2px; }
+
+  .hl { color: var(--accent); font-weight: 700; }
+
+  .output-section {
+    margin-bottom: 12px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid rgba(0,0,0,0.05);
+  }
+
+  .output-section:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
+
+  .output-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.65rem; text-transform: uppercase;
+    letter-spacing: 0.08em; color: var(--text-dim);
+    margin-bottom: 4px;
+  }
+
+  /* Meter */
+  .meter {
+    margin-top: 12px; display: flex;
+    align-items: center; gap: 10px;
+  }
+
+  .meter-bar {
+    flex: 1; height: 5px; border-radius: 3px;
+    background: rgba(0,0,0,0.06); overflow: hidden;
+  }
+
+  .meter-fill {
+    height: 100%; border-radius: 3px;
+    transition: width 0.6s ease, background 0.4s ease;
+  }
+
+  .meter-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.65rem; color: var(--text-dim);
+    letter-spacing: 0.05em; min-width: 80px;
+    text-align: right;
+  }
+
+  /* Insight */
+  .insight {
+    text-align: center; margin-top: 28px; padding: 18px;
+    background: var(--surface); border: 1.5px solid var(--border);
+    border-radius: var(--radius); backdrop-filter: blur(12px);
+  }
+
+  .insight-text {
+    font-size: 1rem; font-weight: 700;
+    color: var(--text); line-height: 1.4;
+  }
+
+  .insight-sub {
+    font-size: 0.82rem; font-weight: 500;
+    color: var(--text-dim); margin-top: 5px;
+  }
+
+  /* Word counter */
+  .word-count {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.65rem; color: var(--text-dim);
+    text-align: right; margin-top: 6px;
+    letter-spacing: 0.04em;
+  }
+
+  @media (max-width: 768px) {
+    .columns { grid-template-columns: 1fr; }
+    h1 { font-size: 1.7rem; }
+    body { padding: 24px 16px; }
+    .ingredient { padding: 7px 12px; font-size: 0.8rem; }
+    .display-box { max-height: 400px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="container">
+  <header>
+    <h1>анатомия рисёрч-промпта</h1>
+    <p class="subtitle">от «расскажи про травму» до плана исследования</p>
+  </header>
+
+  <div class="builder">
+    <div class="builder-label">Из чего состоит хороший запрос на рисёрч?</div>
+    <div class="ingredients">
+      <div class="ingredient" data-id="question" onclick="toggle(this)">
+        <span class="check"></span>Конкретный вопрос
+      </div>
+      <div class="ingredient" data-id="context" onclick="toggle(this)">
+        <span class="check"></span>Клинический контекст
+      </div>
+      <div class="ingredient" data-id="evidence" onclick="toggle(this)">
+        <span class="check"></span>Требования к источникам
+      </div>
+      <div class="ingredient" data-id="structure" onclick="toggle(this)">
+        <span class="check"></span>Структура ответа
+      </div>
+      <div class="ingredient" data-id="critical" onclick="toggle(this)">
+        <span class="check"></span>Критический анализ
+      </div>
+      <div class="ingredient" data-id="scope" onclick="toggle(this)">
+        <span class="check"></span>Границы и исключения
+      </div>
+    </div>
+  </div>
+
+  <div class="columns">
+    <div class="col">
+      <div class="col-header">
+        <span class="col-icon">⌨️</span>
+        <span class="col-title">Ваш запрос</span>
+      </div>
+      <div class="display-box" id="prompt"></div>
+      <div class="word-count" id="word-count"></div>
+      <div class="meter">
+        <div class="meter-bar"><div class="meter-fill" id="prompt-meter"></div></div>
+        <div class="meter-label" id="prompt-label"></div>
+      </div>
+    </div>
+    <div class="col">
+      <div class="col-header">
+        <span class="col-icon">📋</span>
+        <span class="col-title">План рисёрча от модели</span>
+      </div>
+      <div class="display-box" id="output"></div>
+      <div class="meter">
+        <div class="meter-bar"><div class="meter-fill" id="output-meter"></div></div>
+        <div class="meter-label" id="output-label"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="insight" id="insight"></div>
+</div>
+
+<script>
+const state = { question: false, context: false, evidence: false, structure: false, critical: false, scope: false };
+
+const prompts = {
+  base: 'Нужны данные про терапию травмы.',
+
+  question: '\n\n<span class="hl">Конкретно: что известно об эффективности пролонгированной экспозиции (PE) в сравнении с EMDR при комплексной травматизации в детстве? Есть ли данные о том, какой подход предпочтительнее, если у клиента выраженная диссоциация?</span>',
+
+  context: '\n\n<span class="hl">Клинический контекст: клиентка 34 года, комплексная травма детства (эмоциональное насилие, пренебрежение), коморбидно — депрессивный эпизод (PHQ-9 = 18), клинический перфекционизм (Frost MPS), паттерн переработок. Работаем в рамках схематерапии, рассматриваю возможность интеграции травмафокусированных интервенций.</span>',
+
+  evidence: '\n\n<span class="hl">Требования к источникам: приоритет — мета-анализы и РКИ за последние 7 лет. Указывай DOI для каждого исследования. Если исследование не рандомизированное — помечай тип дизайна. Если данных нет или они слабые — скажи это прямо, не компенсируй клиническими мнениями.</span>',
+
+  structure: '\n\n<span class="hl">Структура ответа:\n1. Что установлено с высокой степенью доказательности\n2. Где данные противоречивы или неоднозначны\n3. Где данных нет или они недостаточны\n4. Конкретные рекомендации для моего случая — с оговорками\n5. Список ключевых источников с DOI</span>',
+
+  critical: '\n\n<span class="hl">Критический анализ: для каждого ключевого исследования отмечай — размер выборки, длительность follow-up, основные ограничения. Если есть конфликт интересов у авторов — укажи. Отмечай, где заканчиваются данные и начинается интерпретация. Если модель рассуждений расходится с другой — покажи обе позиции.</span>',
+
+  scope: '\n\n<span class="hl">Границы: фокус — взрослые с комплексной травмой детства (не однократная травма, не боевая, не травма взрослого возраста). Не рассматривать фармакотерапию отдельно, только в комбинации с психотерапией. Не включать неопубликованные работы и препринты без рецензирования. Географический фокус — международные исследования, не только US-based.</span>'
+};
+
+const outputs = [
+  // 0
+  `<div class="output-section">
+    <div class="output-label">план</div>
+    Обзор основных подходов к терапии травмы: КПТ, EMDR, психодинамическая терапия, соматический подход. Краткое описание каждого. Общие рекомендации.
+  </div>
+  <div class="output-section">
+    <div class="output-label">проблема</div>
+    Слишком широко. Модель не знает, что конкретно вам нужно — и даст поверхностный обзор из учебника. Без источников, без критики, без привязки к реальности.
+  </div>`,
+
+  // 1 — question
+  `<div class="output-section">
+    <div class="output-label">план</div>
+    1. Обзор PE и EMDR — механизмы, протоколы<br>
+    2. Сравнительные исследования PE vs EMDR<br>
+    3. Данные по комплексной травме отдельно<br>
+    4. Роль диссоциации как модератора эффективности<br>
+    5. Общие выводы
+  </div>
+  <div class="output-section">
+    <div class="output-label">прогресс</div>
+    Уже не обзор всего — а конкретное сравнение. Но модель сама решает, какие источники использовать и на какую глубину идти.
+  </div>`,
+
+  // 2 — question + context
+  `<div class="output-section">
+    <div class="output-label">план</div>
+    1. PE vs EMDR при комплексной травме детства — ключевые РКИ<br>
+    2. Влияние коморбидной депрессии на выбор протокола<br>
+    3. Перфекционизм и переработки как факторы, влияющие на терапию экспозицией<br>
+    4. Диссоциация: противопоказание или требует адаптации протокола?<br>
+    5. Совместимость травмафокусированных интервенций со схематерапией<br>
+    6. Рекомендации по порядку интервенций
+  </div>
+  <div class="output-section">
+    <div class="output-label">прогресс</div>
+    Модель видит конкретного клиента — и план уже учитывает коморбидность, подход и реальные клинические вопросы. Но ещё не ясно, какого качества нужны источники.
+  </div>`,
+
+  // 3 — + evidence
+  `<div class="output-section">
+    <div class="output-label">план</div>
+    1. <strong>PE vs EMDR при комплексной травме</strong> — мета-анализы (Bisson et al., Mavranezouli et al.), РКИ за 2018–2025, DOI<br>
+    2. <strong>Коморбидность: депрессия + травма</strong> — влияние на dropout и эффективность, данные отдельно для PE и EMDR<br>
+    3. <strong>Перфекционизм как модератор</strong> — поиск по пересечению «perfectionism + trauma treatment outcome» (предупреждение: данных, вероятно, мало)<br>
+    4. <strong>Диссоциация</strong> — Lyssenko et al., phase-based vs direct exposure дебаты, уровень доказательности<br>
+    5. <strong>Интеграция со схематерапией</strong> — Arntz et al., протоколы imagery rescripting в ST<br>
+    6. <strong>Источники</strong> — полный список с DOI, тип дизайна для каждого
+  </div>
+  <div class="output-section">
+    <div class="output-label">прогресс</div>
+    Появились конкретные имена, DOI, указание на тип дизайна. Модель предупреждает заранее, где данных может не быть. Это уже серьёзный рисёрч.
+  </div>`,
+
+  // 4 — + structure
+  `<div class="output-section">
+    <div class="output-label">раздел 1 · установлено</div>
+    PE и EMDR сопоставимы по эффективности при ПТСР (мета-анализы высокого качества). Оба рекомендованы NICE, APA, ISTSS. Для комплексной травмы — данные менее однозначны.
+  </div>
+  <div class="output-section">
+    <div class="output-label">раздел 2 · противоречиво</div>
+    Phase-based подход vs прямая экспозиция при комплексной травме — активные дебаты. Роль диссоциации как модератора — разнонаправленные данные. Оптимальная длительность стабилизации.
+  </div>
+  <div class="output-section">
+    <div class="output-label">раздел 3 · нет данных</div>
+    Перфекционизм как модератор эффективности травмафокусированной терапии — исследований не обнаружено. Комбинация ST + PE/EMDR — единичные протоколы, нет РКИ.
+  </div>
+  <div class="output-section">
+    <div class="output-label">раздел 4 · рекомендации с оговорками</div>
+    Для конкретного случая: варианты последовательности, условия для начала экспозиционной работы, маркеры готовности.
+  </div>
+  <div class="output-section">
+    <div class="output-label">прогресс</div>
+    Чёткое разделение: что знаем — что спорно — чего не знаем. Модель не маскирует пробелы, а помечает их отдельным блоком.
+  </div>`,
+
+  // 5 — + critical
+  `<div class="output-section">
+    <div class="output-label">раздел 1 · установлено</div>
+    PE ≈ EMDR при ПТСР: Bisson et al. (2024), мета-анализ, 53 РКИ, N>4000, DOI: ... — <em>ограничение: большинство исследований на однократной травме, не комплексной</em>.<br>
+    ISTSS guidelines (2024) рекомендуют оба — <em>уровень доказательности: высокий для ПТСР, умеренный для complex PTSD</em>.
+  </div>
+  <div class="output-section">
+    <div class="output-label">раздел 2 · противоречиво</div>
+    Cloitre et al. (2020): phase-based > прямая экспозиция при complex PTSD, N=104, <em>конфликт интересов: первый автор — разработчик STAIR</em>.<br>
+    De Jongh et al. (2022): прямая экспозиция безопасна и при диссоциации, N=83, <em>ограничение: нет follow-up дольше 6 мес</em>.
+  </div>
+  <div class="output-section">
+    <div class="output-label">раздел 3 · нет данных</div>
+    Перфекционизм × trauma outcome — 0 релевантных РКИ. Есть корреляционные данные (Egan et al., 2022) по перфекционизму и dropout из КПТ — <em>не trauma-specific, малая выборка</em>.
+  </div>
+  <div class="output-section">
+    <div class="output-label">прогресс</div>
+    Каждый источник — с критикой: выборка, ограничения, конфликт интересов, что именно доказано. Модель показывает где кончаются данные и начинается интерпретация.
+  </div>`,
+
+  // 6 — all
+  `<div class="output-section">
+    <div class="output-label">раздел 1 · установлено (высокая доказательность)</div>
+    PE ≈ EMDR при однократной травме: Bisson et al. (2024), 53 РКИ, N>4000. Для complex PTSD — ISTSS (2024) рекомендует оба с оговоркой «умеренная доказательность».<br>
+    <em>⚠ Большинство РКИ — US/European samples, возможна ограниченная обобщаемость.</em>
+  </div>
+  <div class="output-section">
+    <div class="output-label">раздел 2 · противоречиво</div>
+    Phase-based подход: Cloitre et al. (2020), N=104, STAIR+PE > PE alone — <em>автор-разработчик STAIR, потенциальный конфликт интересов</em>. Контраргумент: De Jongh et al. (2022), N=83, прямая экспозиция безопасна при диссоциации — <em>follow-up только 6 мес</em>.<br>
+    Диссоциация: Lyssenko et al. (2023), систематический обзор — высокая диссоциация замедляет, но не блокирует эффект экспозиции. <em>Качество включённых исследований — от низкого до умеренного.</em>
+  </div>
+  <div class="output-section">
+    <div class="output-label">раздел 3 · нет данных</div>
+    Перфекционизм как модератор — 0 РКИ в trauma-контексте. Egan et al. (2022): корреляция перфекционизма с dropout из КПТ, <em>N=47, не рандомизировано, не trauma-specific</em>.<br>
+    Интеграция ST + exposure: Arntz & Jacob (2013) — протокол imagery rescripting в ST, <em>не РКИ, описательный</em>. Нет прямых сравнений ST+PE vs ST alone.
+  </div>
+  <div class="output-section">
+    <div class="output-label">раздел 4 · рекомендации (с оговорками)</div>
+    Для данного случая (комплексная травма + депрессия + перфекционизм): рассмотреть imagery rescripting внутри ST как первый шаг. Оценить уровень диссоциации (DES-II) перед принятием решения о прямой экспозиции. Перфекционизм может потребовать отдельной проработки до/параллельно — данных на этот счёт нет, это клиническая гипотеза.<br>
+    <em>⚠ Эта рекомендация основана на экстраполяции, не на прямых доказательствах для данной комбинации.</em>
+  </div>
+  <div class="output-section">
+    <div class="output-label">прогресс</div>
+    Полный план рисёрча: международный фокус, только рецензированные источники, фильтр по типу травмы. Модель чётко разделяет данные, интерпретации и клинические гипотезы. Это не готовый рисёрч — но это план, по которому можно работать.
+  </div>`
+];
+
+const insights = [
+  '«Нужны данные про травму» — это не запрос. Это направление взгляда.',
+  'Конкретный вопрос — и модель уже не пересказывает учебник, а ищет ответ.',
+  'Контекст клиента превращает абстрактный рисёрч в клинически релевантный.',
+  'Требования к источникам — разница между «я слышал» и «вот DOI».',
+  'Структура ответа: что знаем / что спорно / чего не знаем — модель честно размечает пробелы.',
+  'Критический анализ — модель не просто цитирует, а оценивает каждый источник.',
+  'Все 6 ингредиентов. Это не рисёрч «нейросетью». Это рисёрч вами — с помощью нейросети.'
+];
+
+const promptLabels = ['гугл-запрос', 'вопрос', 'кейс', 'доказательства', 'структура', 'критика', 'полный промпт'];
+const outputLabels = ['статья из википедии', 'общий план', 'под клиента', 'с источниками', 'структурирован', 'с критикой', 'рабочий план'];
+
+function toggle(el) {
+  const id = el.dataset.id;
+  state[id] = !state[id];
+  el.classList.toggle('active');
+  render();
+}
+
+function countWords(html) {
+  const text = html.replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim();
+  return text.split(' ').length;
+}
+
+function render() {
+  const count = Object.values(state).filter(Boolean).length;
+
+  // Build prompt
+  let p = prompts.base;
+  if (state.question) p += prompts.question;
+  if (state.context) p += prompts.context;
+  if (state.evidence) p += prompts.evidence;
+  if (state.structure) p += prompts.structure;
+  if (state.critical) p += prompts.critical;
+  if (state.scope) p += prompts.scope;
+
+  const promptEl = document.getElementById('prompt');
+  promptEl.innerHTML = p.replace(/\n/g, '<br>');
+
+  const words = countWords(p);
+  document.getElementById('word-count').textContent = words + ' слов' + (words === 1 ? 'о' : '');
+
+  // Output
+  document.getElementById('output').innerHTML = outputs[count];
+
+  // Meters
+  const pPct = 8 + count * 15.3;
+  const oPct = 6 + count * 15.7;
+  const pm = document.getElementById('prompt-meter');
+  const om = document.getElementById('output-meter');
+  pm.style.width = pPct + '%';
+  om.style.width = oPct + '%';
+
+  const color = count <= 1 ? '#9E1A46' : count <= 3 ? '#B8470B' : '#2E7D32';
+  pm.style.background = color;
+  om.style.background = color;
+
+  document.getElementById('prompt-label').textContent = promptLabels[count];
+  document.getElementById('output-label').textContent = outputLabels[count];
+
+  // Insight
+  document.getElementById('insight').innerHTML =
+    '<div class="insight-text">' + insights[count] + '</div>';
+}
+
+render();
+</script>
+
+</body>
+</html>
