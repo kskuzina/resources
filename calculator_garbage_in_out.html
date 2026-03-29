@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Garbage In → Garbage Out</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400&family=Manrope:wght@500;700;800&family=Unbounded:wght@700;800;900&display=swap');
+
+  :root {
+    --bg: #F2F0EB;
+    --text: #1A1A1A;
+    --text-muted: #3d3d3d;
+    --text-dim: #6b6b6b;
+    --accent: #B8470B;
+    --surface: rgba(255,255,255,0.55);
+    --surface-active: rgba(255,255,255,0.8);
+    --border: rgba(0,0,0,0.08);
+    --green: #2E7D32;
+    --green-bg: rgba(46,125,50,0.06);
+    --red: #9E1A46;
+    --red-bg: rgba(158,26,70,0.06);
+    --c1: #9E1A4640; --c2: #B8470B30; --c3: #E26A4A30; --c4: #D99A5B25; --c5: #C84C5525;
+    --radius: 14px;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Manrope', sans-serif;
+    background-color: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    padding: 32px 24px 80px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+    position: relative;
+    overflow-x: hidden;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.025'/%3E%3C/svg%3E");
+  }
+
+  body::before {
+    content: "";
+    position: fixed;
+    top: -20%; left: -20%; right: -20%; bottom: -20%;
+    z-index: -1; pointer-events: none;
+    background-image:
+      radial-gradient(circle at 10% 10%, var(--c1) 0%, transparent 75%),
+      radial-gradient(circle at 90% 10%, var(--c2) 0%, transparent 80%),
+      radial-gradient(circle at 90% 90%, var(--c3) 0%, transparent 75%),
+      radial-gradient(circle at 10% 90%, var(--c4) 0%, transparent 80%),
+      radial-gradient(circle at 50% 50%, var(--c5) 0%, transparent 85%);
+    filter: blur(80px);
+    will-change: transform, opacity;
+    animation: breathing 8s cubic-bezier(0.4, 0, 0.2, 1) infinite alternate;
+  }
+
+  @keyframes breathing {
+    0%   { transform: scale(1) translate(0%, 0%); opacity: 0.7; }
+    100% { transform: scale(1.15) translate(-2%, 2%); opacity: 1; }
+  }
+
+  .container { max-width: 960px; margin: 0 auto; }
+
+  header { text-align: center; margin-bottom: 40px; }
+
+  h1 {
+    font-family: 'Unbounded', sans-serif;
+    font-weight: 900;
+    font-size: 2.4rem;
+    line-height: 0.95;
+    letter-spacing: -0.04em;
+    text-transform: lowercase;
+    color: var(--text);
+    margin-bottom: 10px;
+  }
+
+  .subtitle {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.78rem;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+  }
+
+  /* Prompt builder */
+  .builder {
+    margin-bottom: 36px;
+  }
+
+  .builder-label {
+    font-family: 'Manrope', sans-serif;
+    font-weight: 800;
+    font-size: 1.1rem;
+    margin-bottom: 14px;
+    color: var(--text);
+  }
+
+  .ingredients {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 24px;
+  }
+
+  .ingredient {
+    padding: 10px 18px;
+    border-radius: 12px;
+    border: 1.5px solid var(--border);
+    background: var(--surface);
+    font-family: 'Manrope', sans-serif;
+    font-size: 0.88rem;
+    font-weight: 500;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: all 0.3s ease;
+    backdrop-filter: blur(8px);
+    user-select: none;
+    position: relative;
+  }
+
+  .ingredient:hover {
+    border-color: rgba(0,0,0,0.2);
+    background: var(--surface-active);
+  }
+
+  .ingredient.active {
+    background: rgba(184,71,11,0.1);
+    border-color: var(--accent);
+    color: var(--accent);
+    font-weight: 700;
+  }
+
+  .ingredient .check {
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    border-radius: 4px;
+    border: 1.5px solid var(--border);
+    vertical-align: middle;
+    margin-right: 8px;
+    transition: all 0.2s ease;
+    position: relative;
+  }
+
+  .ingredient.active .check {
+    background: var(--accent);
+    border-color: var(--accent);
+  }
+
+  .ingredient.active .check::after {
+    content: '✓';
+    color: white;
+    font-size: 0.7rem;
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+  }
+
+  /* Two columns */
+  .columns {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+
+  .col {
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius);
+    padding: 22px;
+    backdrop-filter: blur(12px);
+    transition: all 0.4s ease;
+    min-height: 320px;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .col-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 14px;
+  }
+
+  .col-icon {
+    font-size: 1.4rem;
+  }
+
+  .col-title {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--text-dim);
+  }
+
+  .prompt-display {
+    background: rgba(0,0,0,0.03);
+    border-radius: 10px;
+    padding: 16px;
+    font-size: 0.88rem;
+    line-height: 1.55;
+    color: var(--text-muted);
+    flex: 1;
+    transition: all 0.4s ease;
+    font-weight: 500;
+  }
+
+  .prompt-display .highlight {
+    color: var(--accent);
+    font-weight: 700;
+  }
+
+  .output-display {
+    background: rgba(0,0,0,0.03);
+    border-radius: 10px;
+    padding: 16px;
+    font-size: 0.88rem;
+    line-height: 1.55;
+    color: var(--text-muted);
+    flex: 1;
+    transition: all 0.4s ease;
+    font-weight: 500;
+  }
+
+  /* Quality meter */
+  .meter {
+    margin-top: 14px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .meter-bar {
+    flex: 1;
+    height: 6px;
+    border-radius: 3px;
+    background: rgba(0,0,0,0.06);
+    overflow: hidden;
+  }
+
+  .meter-fill {
+    height: 100%;
+    border-radius: 3px;
+    transition: width 0.6s ease, background 0.4s ease;
+  }
+
+  .meter-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.68rem;
+    color: var(--text-dim);
+    letter-spacing: 0.05em;
+    min-width: 28px;
+    text-align: right;
+  }
+
+  /* Footer insight */
+  .insight {
+    text-align: center;
+    margin-top: 36px;
+    padding: 20px;
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius);
+    backdrop-filter: blur(12px);
+    transition: all 0.4s ease;
+  }
+
+  .insight-text {
+    font-family: 'Manrope', sans-serif;
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: var(--text);
+    line-height: 1.4;
+  }
+
+  .insight-sub {
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: var(--text-dim);
+    margin-top: 6px;
+  }
+
+  @media (max-width: 768px) {
+    .columns { grid-template-columns: 1fr; }
+    h1 { font-size: 1.8rem; }
+    body { padding: 24px 16px; }
+    .ingredients { gap: 6px; }
+    .ingredient { padding: 8px 14px; font-size: 0.82rem; }
+  }
+</style>
+</head>
+<body>
+
+<div class="container">
+  <header>
+    <h1>garbage in → garbage out</h1>
+    <p class="subtitle">качество запроса определяет качество ответа</p>
+  </header>
+
+  <div class="builder">
+    <div class="builder-label">Что вы добавляете в запрос?</div>
+    <div class="ingredients">
+      <div class="ingredient" data-id="role" onclick="toggle(this)">
+        <span class="check"></span>Мой подход
+      </div>
+      <div class="ingredient" data-id="client" onclick="toggle(this)">
+        <span class="check"></span>Контекст клиента
+      </div>
+      <div class="ingredient" data-id="task" onclick="toggle(this)">
+        <span class="check"></span>Конкретная задача
+      </div>
+      <div class="ingredient" data-id="format" onclick="toggle(this)">
+        <span class="check"></span>Формат результата
+      </div>
+      <div class="ingredient" data-id="constraints" onclick="toggle(this)">
+        <span class="check"></span>Ограничения
+      </div>
+    </div>
+  </div>
+
+  <div class="columns">
+    <div class="col">
+      <div class="col-header">
+        <span class="col-icon">⌨️</span>
+        <span class="col-title">Ваш запрос</span>
+      </div>
+      <div class="prompt-display" id="prompt"></div>
+      <div class="meter">
+        <div class="meter-bar"><div class="meter-fill" id="prompt-meter"></div></div>
+        <div class="meter-label" id="prompt-score"></div>
+      </div>
+    </div>
+    <div class="col">
+      <div class="col-header">
+        <span class="col-icon">💬</span>
+        <span class="col-title">Ответ модели</span>
+      </div>
+      <div class="output-display" id="output"></div>
+      <div class="meter">
+        <div class="meter-bar"><div class="meter-fill" id="output-meter"></div></div>
+        <div class="meter-label" id="output-score"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="insight" id="insight"></div>
+</div>
+
+<script>
+const state = { role: false, client: false, task: false, format: false, constraints: false };
+
+const promptParts = {
+  base: 'Придумай упражнение для клиента.',
+  role: '<span class="highlight">Я работаю в подходе ACT.</span>',
+  client: '<span class="highlight">Клиентка 34 года, основной запрос — тревога на фоне перфекционизма, сейчас на этапе работы с ценностями.</span>',
+  task: '<span class="highlight">Нужна практика заземления с акцентом на интероцепцию — ощущения внутри тела.</span>',
+  format: '<span class="highlight">Формат: скрипт для терапевта, 7-10 минут, тон тёплый, без инфантилизации.</span>',
+  constraints: '<span class="highlight">Основа — техника «Бросить якорь» (Russ Harris). Не использовать стандартную 5-4-3-2-1.</span>'
+};
+
+const outputs = [
+  // 0 active
+  {
+    text: 'Попробуйте упражнение «Безопасное место». Попросите клиента закрыть глаза и представить место, где ему спокойно. Пусть опишет, что видит, слышит и чувствует. Это упражнение помогает снизить тревогу и развить навыки саморегуляции. Можно использовать на сессии или дать как домашнее задание...',
+    comment: 'Обобщённое, из интернета. Не учитывает ни подход, ни клиента, ни задачу.'
+  },
+  // 1 active
+  {
+    text: 'В рамках ACT хорошо работают упражнения на осознанность и принятие. Например, «Листья на ручье» — клиент представляет, как мысли уплывают по воде. Или практика «Наблюдающее Я» — разделение себя и своих переживаний. Также можно использовать метафору пассажиров в автобусе...',
+    comment: 'Уже в нужном подходе, но это набор стандартных техник — без привязки к клиенту.'
+  },
+  // 2 active
+  {
+    text: 'Для клиентки с тревогой на фоне перфекционизма на этапе работы с ценностями подойдёт практика, которая помогает заметить разницу между «голосом перфекциониста» и тем, что действительно важно. Можно предложить упражнение на осознанное наблюдение за своими реакциями в момент тревоги, с фокусом на то, какие ценности стоят за стремлением к идеалу...',
+    comment: 'Уже про конкретного клиента, но задача размытая — модель угадывает, что вам нужно.'
+  },
+  // 3 active
+  {
+    text: 'Вот практика заземления с акцентом на интероцепцию для вашей клиентки.\n\nНачните с приглашения обратить внимание на точки контакта тела с поверхностями. Затем перейдите внутрь: «Попробуйте заметить, что происходит в области груди прямо сейчас... Не нужно ничего менять. Просто заметьте». Через 2-3 минуты — переход к дыханию как внутреннему якорю...',
+    comment: 'Конкретно и по задаче. Но без формата — модель сама решает, как оформить.'
+  },
+  // 4 active
+  {
+    text: 'Скрипт для терапевта (8 мин):\n\n«Давайте сейчас сделаем одну практику. Вам не нужно ничего делать правильно — просто замечайте.\n\nОбратите внимание, где ваше тело соприкасается со стулом... Какие ощущения там — давление, тепло, прохлада?\n\nТеперь перенесите внимание внутрь. В область груди. Что вы замечаете? Может быть сжатие, тяжесть, движение...\n\nА теперь — дыхание. Не меняйте его...»',
+    comment: 'Готовый скрипт в нужном формате и тоне. Почти рабочий материал.'
+  },
+  // 5 active (all)
+  {
+    text: 'Скрипт для терапевта (8 мин). Основа — «Бросить якорь» (Russ Harris), модификация с акцентом на интероцепцию.\n\n«Давайте попробуем одну практику. Здесь нет правильного и неправильного — просто замечайте то, что есть.\n\nПервое: заметьте, где ваше тело касается стула. Ощущение давления, контакта... Это ваш внешний якорь.\n\nТеперь переносим внимание глубже. Что происходит в области живота прямо сейчас? Может быть напряжение, пульсация, тепло, пустота — что угодно. Не нужно это оценивать.\n\n[Пауза 15 сек]\n\nА теперь — ваш самый надёжный внутренний якорь: дыхание...»',
+    comment: 'Точно по запросу: конкретный подход, техника, клиент, формат, ограничения. Готов к использованию.'
+  }
+];
+
+const insights = [
+  '«Придумай упражнение» — это как ввести в калькулятор «посчитай что-нибудь»',
+  'Подход задан — модель уже не гадает. Но до конкретного результата далеко',
+  'Контекст клиента сужает пространство. Модель начинает думать прицельнее',
+  'Чем точнее задача — тем меньше модель угадывает, тем больше делает',
+  'Формат — это разница между «набросал идею» и «готовый рабочий материал»',
+  'Все 5 ингредиентов. Модель не угадывает — она выполняет. Думаете вы, делает она.'
+];
+
+function toggle(el) {
+  const id = el.dataset.id;
+  state[id] = !state[id];
+  el.classList.toggle('active');
+  render();
+}
+
+function render() {
+  const count = Object.values(state).filter(Boolean).length;
+
+  // Build prompt
+  let parts = [promptParts.base];
+  if (state.role) parts.push(promptParts.role);
+  if (state.client) parts.push(promptParts.client);
+  if (state.task) parts.push(promptParts.task);
+  if (state.format) parts.push(promptParts.format);
+  if (state.constraints) parts.push(promptParts.constraints);
+  
+  document.getElementById('prompt').innerHTML = parts.join(' ');
+
+  // Output
+  const o = outputs[count];
+  document.getElementById('output').innerHTML = o.text.replace(/\n/g, '<br>');
+
+  // Meters
+  const promptPct = 15 + count * 17;
+  const outputPct = 12 + count * 17.6;
+  
+  const promptMeter = document.getElementById('prompt-meter');
+  const outputMeter = document.getElementById('output-meter');
+  
+  promptMeter.style.width = promptPct + '%';
+  outputMeter.style.width = outputPct + '%';
+
+  const promptColor = count <= 1 ? '#9E1A46' : count <= 3 ? '#B8470B' : '#2E7D32';
+  const outputColor = count <= 1 ? '#9E1A46' : count <= 3 ? '#B8470B' : '#2E7D32';
+  
+  promptMeter.style.background = promptColor;
+  outputMeter.style.background = outputColor;
+
+  document.getElementById('prompt-score').textContent = ['⚡','⚡⚡','⚡⚡','⚡⚡⚡','⚡⚡⚡⚡','⚡⚡⚡⚡⚡'][count];
+  document.getElementById('output-score').textContent = ['✗','◐','◐','◑','◕','✓'][count];
+
+  // Insight
+  document.getElementById('insight').innerHTML = 
+    '<div class="insight-text">' + insights[count] + '</div>' +
+    '<div class="insight-sub">' + o.comment + '</div>';
+}
+
+// Initial render
+render();
+</script>
+
+</body>
+</html>
