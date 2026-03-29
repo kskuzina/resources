@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Верхушка айсберга</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400&family=Manrope:wght@500;700;800&family=Unbounded:wght@700;800;900&display=swap');
+
+  :root {
+    --bg: #F2F0EB;
+    --text: #1A1A1A;
+    --text-muted: #3d3d3d;
+    --text-dim: #6b6b6b;
+    --accent: #B8470B;
+    --surface: rgba(255,255,255,0.55);
+    --border: rgba(0,0,0,0.08);
+    --water: #4D7E84;
+    --water-light: rgba(77, 126, 132, 0.08);
+    --ice-above: rgba(255,255,255,0.7);
+    --ice-below: rgba(107,109,158,0.12);
+    --c1: #9E1A4640; --c2: #B8470B30; --c3: #E26A4A30; --c4: #D99A5B25; --c5: #C84C5525;
+    --radius: 14px;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Manrope', sans-serif;
+    background-color: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    padding: 32px 24px 80px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+    position: relative;
+    overflow-x: hidden;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.025'/%3E%3C/svg%3E");
+  }
+
+  body::before {
+    content: "";
+    position: fixed;
+    top: -20%; left: -20%; right: -20%; bottom: -20%;
+    z-index: -1; pointer-events: none;
+    background-image:
+      radial-gradient(circle at 10% 10%, var(--c1) 0%, transparent 75%),
+      radial-gradient(circle at 90% 10%, var(--c2) 0%, transparent 80%),
+      radial-gradient(circle at 90% 90%, var(--c3) 0%, transparent 75%),
+      radial-gradient(circle at 10% 90%, var(--c4) 0%, transparent 80%),
+      radial-gradient(circle at 50% 50%, var(--c5) 0%, transparent 85%);
+    filter: blur(80px);
+    will-change: transform, opacity;
+    animation: breathing 8s cubic-bezier(0.4, 0, 0.2, 1) infinite alternate;
+  }
+
+  @keyframes breathing {
+    0%   { transform: scale(1) translate(0%, 0%); opacity: 0.7; }
+    100% { transform: scale(1.15) translate(-2%, 2%); opacity: 1; }
+  }
+
+  .container { max-width: 760px; margin: 0 auto; }
+
+  header { text-align: center; margin-bottom: 36px; }
+
+  h1 {
+    font-family: 'Unbounded', sans-serif;
+    font-weight: 900; font-size: 2.4rem;
+    line-height: 0.95; letter-spacing: -0.04em;
+    text-transform: lowercase; color: var(--text);
+    margin-bottom: 10px;
+  }
+
+  .subtitle {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.76rem; color: var(--text-dim);
+    text-transform: uppercase; letter-spacing: 0.12em;
+  }
+
+  /* Iceberg container */
+  .iceberg {
+    position: relative;
+    overflow: hidden;
+    border-radius: var(--radius);
+    border: 1.5px solid var(--border);
+    background: var(--surface);
+    backdrop-filter: blur(12px);
+  }
+
+  /* Above water */
+  .above {
+    padding: 28px 28px 20px;
+    position: relative;
+    z-index: 2;
+  }
+
+  .section-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.68rem; text-transform: uppercase;
+    letter-spacing: 0.1em; color: var(--text-dim);
+    margin-bottom: 14px;
+  }
+
+  .above .section-label { color: var(--accent); }
+
+  .items {
+    display: flex; flex-wrap: wrap; gap: 8px;
+  }
+
+  .item {
+    padding: 8px 16px;
+    border-radius: 10px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    transition: all 0.3s ease;
+  }
+
+  .above .item {
+    background: rgba(184, 71, 11, 0.08);
+    color: var(--accent);
+    border: 1px solid rgba(184, 71, 11, 0.15);
+  }
+
+  /* Waterline */
+  .waterline-zone {
+    position: relative;
+    z-index: 3;
+    overflow: hidden;
+  }
+
+  .waterline {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 14px 28px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+  }
+
+  .waterline:hover { background: var(--water-light); }
+
+  .waterline-line {
+    flex: 1;
+    height: 1.5px;
+    background: var(--water);
+    opacity: 0.3;
+  }
+
+  .waterline-text {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--water);
+    padding: 0 16px;
+    white-space: nowrap;
+    transition: all 0.3s ease;
+  }
+
+  .waterline-hint {
+    font-family: 'Manrope', sans-serif;
+    font-size: 0.78rem;
+    color: var(--water);
+    text-align: center;
+    padding-bottom: 10px;
+    opacity: 0.7;
+    cursor: pointer;
+    transition: opacity 0.3s ease;
+  }
+
+  .waterline-hint:hover { opacity: 1; }
+
+  .revealed .waterline-hint { display: none; }
+
+  /* Below water */
+  .below {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 1.2s cubic-bezier(0.4, 0, 0.2, 1), 
+                padding 0.6s ease,
+                opacity 0.8s ease;
+    opacity: 0;
+    padding: 0 28px;
+    background: linear-gradient(180deg, 
+      rgba(77, 126, 132, 0.04) 0%, 
+      rgba(107, 109, 158, 0.06) 50%,
+      rgba(107, 109, 158, 0.1) 100%);
+  }
+
+  .revealed .below {
+    max-height: 800px;
+    opacity: 1;
+    padding: 20px 28px 24px;
+  }
+
+  .below .section-label { color: var(--water); }
+
+  .below .item {
+    background: rgba(77, 126, 132, 0.08);
+    color: var(--water);
+    border: 1px solid rgba(77, 126, 132, 0.15);
+  }
+
+  .below .items {
+    margin-bottom: 18px;
+  }
+
+  .mode-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.65rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-dim);
+    text-align: center;
+    padding: 12px 0 4px;
+    border-top: 1px solid rgba(0,0,0,0.05);
+    margin-top: 8px;
+  }
+
+  .mode-items {
+    display: flex; flex-wrap: wrap; gap: 8px;
+    justify-content: center;
+    margin-top: 8px;
+  }
+
+  .mode-item {
+    padding: 6px 14px;
+    border-radius: 10px;
+    font-size: 0.8rem;
+    font-weight: 700;
+    background: rgba(26, 26, 26, 0.06);
+    color: var(--text-muted);
+    border: 1px solid rgba(0,0,0,0.08);
+  }
+
+  /* Footer */
+  .footer-note {
+    text-align: center;
+    padding: 18px 28px 24px;
+    max-height: 0;
+    overflow: hidden;
+    opacity: 0;
+    transition: max-height 0.8s ease 0.6s, opacity 0.6s ease 0.8s, padding 0.6s ease 0.6s;
+  }
+
+  .revealed .footer-note {
+    max-height: 200px;
+    opacity: 1;
+    padding: 18px 28px 28px;
+  }
+
+  .footer-text {
+    font-size: 0.92rem;
+    font-weight: 700;
+    color: var(--text);
+    line-height: 1.45;
+  }
+
+  .footer-sub {
+    font-size: 0.82rem;
+    font-weight: 500;
+    color: var(--text-dim);
+    margin-top: 6px;
+    line-height: 1.4;
+  }
+
+  /* Chat label above waterline */
+  .chat-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.62rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-dim);
+    text-align: center;
+    padding: 10px 0 0;
+    opacity: 0.5;
+  }
+
+  @media (max-width: 768px) {
+    h1 { font-size: 1.8rem; }
+    body { padding: 24px 16px; }
+    .above, .below { padding-left: 20px; padding-right: 20px; }
+    .item { font-size: 0.8rem; padding: 7px 12px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="container">
+  <header>
+    <h1>верхушка айсберга</h1>
+    <p class="subtitle">то, что мы обсудили — и то, что осталось под водой</p>
+  </header>
+
+  <div class="iceberg" id="iceberg">
+    <div class="above">
+      <div class="section-label">что мы сегодня увидели</div>
+      <div class="items">
+        <div class="item">рисёрч по теме</div>
+        <div class="item">адаптация упражнений</div>
+        <div class="item">упражнение → PDF → пост</div>
+        <div class="item">голосовые → заметки</div>
+        <div class="item">визуализация концептуализации</div>
+        <div class="item">генерация изображений</div>
+        <div class="item">обучение (NotebookLM)</div>
+      </div>
+      <div class="chat-label">всё это — режим чата</div>
+    </div>
+
+    <div class="waterline-zone">
+      <div class="waterline" onclick="reveal()">
+        <div class="waterline-line"></div>
+        <div class="waterline-text">линия воды</div>
+        <div class="waterline-line"></div>
+      </div>
+      <div class="waterline-hint" onclick="reveal()">↓ нажмите, чтобы опустить воду</div>
+    </div>
+
+    <div class="below">
+      <div class="section-label">что ещё возможно</div>
+      <div class="items">
+        <div class="item">интерактивные учебные пособия</div>
+        <div class="item">3D-модели для презентаций</div>
+        <div class="item">код презентаций (Slidev)</div>
+        <div class="item">сайт с нуля</div>
+        <div class="item">приложение для конкретного клиента</div>
+        <div class="item">аудио-практики для клиентов</div>
+        <div class="item">анализ видеозаписей</div>
+        <div class="item">персонализированные учебные курсы</div>
+        <div class="item">автоматизация рутинных цепочек</div>
+      </div>
+
+      <div class="mode-label">другие режимы работы с ии</div>
+      <div class="mode-items">
+        <div class="mode-item">коворкинг — модель видит ваши файлы и папки</div>
+        <div class="mode-item">кодинг — модель пишет и запускает код</div>
+        <div class="mode-item">агенты — ИИ сам выполняет многошаговые задачи</div>
+      </div>
+    </div>
+
+    <div class="footer-note">
+      <div class="footer-text">Возможности ограничены воображением, бюджетом на подписки и временем.</div>
+      <div class="footer-sub">Современный уровень развития ИИ позволяет очень многое для тех, кто только начинает.</div>
+    </div>
+  </div>
+</div>
+
+<script>
+function reveal() {
+  document.getElementById('iceberg').classList.toggle('revealed');
+}
+</script>
+
+</body>
+</html>
