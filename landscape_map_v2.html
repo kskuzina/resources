@@ -1,0 +1,778 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Карта ИИ-ландшафта · март 2026</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400&family=Manrope:wght@500;700;800&family=Unbounded:wght@700;800;900&display=swap');
+
+  :root {
+    --bg: #F2F0EB;
+    --text: #1A1A1A;
+    --text-muted: #3d3d3d;
+    --text-dim: #6b6b6b;
+    --accent: #B8470B;
+    --surface: rgba(255,255,255,0.55);
+    --surface-hover: rgba(255,255,255,0.75);
+    --border: rgba(0,0,0,0.08);
+    --border-hover: rgba(0,0,0,0.15);
+    --c1: #9E1A4640;
+    --c2: #B8470B30;
+    --c3: #E26A4A30;
+    --c4: #D99A5B25;
+    --c5: #C84C5525;
+    --radius: 14px;
+    --tag-bg: rgba(0,0,0,0.05);
+    --green-bg: rgba(46,125,50,0.08);
+    --green-text: #2E7D32;
+    --amber-bg: rgba(184,71,11,0.08);
+    --amber-text: #B8470B;
+    --blue-bg: rgba(30,90,160,0.08);
+    --blue-text: #1E5AA0;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Manrope', sans-serif;
+    background-color: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    padding: 32px 24px 80px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+    position: relative;
+    overflow-x: hidden;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.025'/%3E%3C/svg%3E");
+  }
+
+  body::before {
+    content: "";
+    position: fixed;
+    top: -20%; left: -20%; right: -20%; bottom: -20%;
+    z-index: -1;
+    pointer-events: none;
+    background-image:
+      radial-gradient(circle at 10% 10%, var(--c1) 0%, transparent 75%),
+      radial-gradient(circle at 90% 10%, var(--c2) 0%, transparent 80%),
+      radial-gradient(circle at 90% 90%, var(--c3) 0%, transparent 75%),
+      radial-gradient(circle at 10% 90%, var(--c4) 0%, transparent 80%),
+      radial-gradient(circle at 50% 50%, var(--c5) 0%, transparent 85%);
+    filter: blur(80px);
+    will-change: transform, opacity;
+    animation: breathing 8s cubic-bezier(0.4, 0, 0.2, 1) infinite alternate;
+  }
+
+  @keyframes breathing {
+    0%   { transform: scale(1) translate(0%, 0%); opacity: 0.7; }
+    100% { transform: scale(1.15) translate(-2%, 2%); opacity: 1; }
+  }
+
+  .container { max-width: 1100px; margin: 0 auto; }
+
+  header { text-align: center; margin-bottom: 44px; }
+
+  h1 {
+    font-family: 'Unbounded', sans-serif;
+    font-weight: 900;
+    font-size: 2.8rem;
+    line-height: 0.95;
+    letter-spacing: -0.04em;
+    text-transform: lowercase;
+    color: var(--text);
+    margin-bottom: 10px;
+  }
+
+  .subtitle {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.78rem;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+  }
+
+  /* Filters */
+  .filters {
+    display: flex; gap: 7px; justify-content: center;
+    flex-wrap: wrap; margin-bottom: 36px;
+  }
+
+  .filter-btn {
+    padding: 7px 16px;
+    border-radius: 20px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--text-dim);
+    font-family: 'Manrope', sans-serif;
+    font-size: 0.82rem; font-weight: 500;
+    cursor: pointer;
+    transition: all 0.25s ease;
+    backdrop-filter: blur(8px);
+  }
+
+  .filter-btn:hover {
+    border-color: var(--accent);
+    color: var(--text);
+  }
+
+  .filter-btn.active {
+    background: rgba(184,71,11,0.1);
+    border-color: var(--accent);
+    color: var(--accent);
+    font-weight: 700;
+  }
+
+  /* Categories */
+  .category { margin-bottom: 36px; }
+
+  .category-header {
+    display: flex; align-items: center; gap: 10px;
+    margin-bottom: 14px; padding-left: 4px;
+  }
+
+  .category-dot {
+    width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0;
+  }
+
+  .category-title {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.72rem; font-weight: 400;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--text-dim);
+  }
+
+  .cards-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 14px;
+  }
+
+  /* Card */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 18px 20px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+    backdrop-filter: blur(12px);
+  }
+
+  .card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0; height: 2.5px;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+  }
+
+  .card:hover {
+    background: var(--surface-hover);
+    border-color: var(--border-hover);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 32px rgba(0,0,0,0.06);
+  }
+
+  .card:hover::before { opacity: 1; }
+
+  .card-top {
+    display: flex; justify-content: space-between;
+    align-items: flex-start; margin-bottom: 4px;
+  }
+
+  .card-name {
+    font-family: 'Manrope', sans-serif;
+    font-size: 1.15rem; font-weight: 800;
+    letter-spacing: -0.01em; color: var(--text);
+  }
+
+  .card-company {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.7rem;
+    color: var(--text-dim);
+    letter-spacing: 0.02em;
+    margin-top: 1px;
+  }
+
+  .card-arrow {
+    color: var(--text-dim);
+    font-size: 1.1rem;
+    transition: transform 0.3s ease;
+    flex-shrink: 0; margin-top: 2px;
+  }
+
+  .card.expanded .card-arrow { transform: rotate(180deg); }
+  .card:hover .card-arrow { color: var(--accent); }
+
+  .card-oneliner {
+    font-size: 0.88rem; color: var(--text-muted);
+    margin-bottom: 10px; line-height: 1.45; font-weight: 500;
+  }
+
+  .card-tags { display: flex; gap: 5px; flex-wrap: wrap; }
+
+  .tag {
+    padding: 3px 9px; border-radius: 10px;
+    background: var(--tag-bg);
+    font-family: 'Manrope', sans-serif;
+    font-size: 0.72rem; color: var(--text-dim); font-weight: 500;
+    white-space: nowrap;
+  }
+
+  /* Expanded */
+  .card-details {
+    max-height: 0; overflow: hidden;
+    transition: max-height 0.4s ease, margin-top 0.3s ease;
+    margin-top: 0;
+  }
+
+  .card.expanded .card-details { max-height: 500px; margin-top: 14px; }
+
+  .card-details-inner {
+    padding-top: 12px;
+    border-top: 1px solid var(--border);
+  }
+
+  .detail-section { margin-bottom: 10px; }
+
+  .detail-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.68rem; font-weight: 400;
+    text-transform: uppercase; letter-spacing: 0.08em;
+    color: var(--text-dim); margin-bottom: 3px;
+  }
+
+  .detail-text {
+    font-size: 0.85rem; color: var(--text-muted);
+    line-height: 1.55; font-weight: 500;
+  }
+
+  .price-tag {
+    display: inline-block; padding: 3px 10px;
+    border-radius: 8px; font-size: 0.78rem; font-weight: 700;
+  }
+
+  .price-free { background: var(--green-bg); color: var(--green-text); }
+  .price-paid { background: var(--amber-bg); color: var(--amber-text); }
+
+  .lecture-badge {
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 4px 10px; border-radius: 8px;
+    background: var(--blue-bg); color: var(--blue-text);
+    font-size: 0.75rem; font-weight: 700; margin-top: 8px;
+    font-family: 'Manrope', sans-serif;
+  }
+
+  .lecture-badge::before { content: '▶'; font-size: 0.55rem; }
+
+  /* Category accent colors */
+  .cat-llm .category-dot { background: var(--accent); }
+  .cat-llm .card::before { background: linear-gradient(90deg, var(--accent), transparent); }
+
+  .cat-specialized .category-dot { background: #6B6D9E; }
+  .cat-specialized .card::before { background: linear-gradient(90deg, #6B6D9E, transparent); }
+
+  .cat-media .category-dot { background: #C84C55; }
+  .cat-media .card::before { background: linear-gradient(90deg, #C84C55, transparent); }
+
+  .cat-local .category-dot { background: #2E7D32; }
+  .cat-local .card::before { background: linear-gradient(90deg, #2E7D32, transparent); }
+
+  .cat-open .category-dot { background: #A36A33; }
+  .cat-open .card::before { background: linear-gradient(90deg, #A36A33, transparent); }
+
+  .card.hidden { display: none; }
+  .category.hidden { display: none; }
+
+  .footer {
+    text-align: center; margin-top: 44px;
+    padding-top: 20px; border-top: 1px solid var(--border);
+    font-family: 'JetBrains Mono', monospace;
+    color: var(--text-dim); font-size: 0.72rem;
+    letter-spacing: 0.05em;
+  }
+
+  @media (max-width: 768px) {
+    .cards-grid { grid-template-columns: 1fr; }
+    h1 { font-size: 2rem; }
+    body { padding: 24px 16px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="container">
+  <header>
+    <h1>карта ландшафта</h1>
+    <p class="subtitle">модели и инструменты · март 2026</p>
+  </header>
+
+  <div class="filters">
+    <button class="filter-btn active" data-filter="all">Все</button>
+    <button class="filter-btn" data-filter="llm">Языковые модели</button>
+    <button class="filter-btn" data-filter="specialized">Специализированные</button>
+    <button class="filter-btn" data-filter="media">Медиа</button>
+    <button class="filter-btn" data-filter="local">Локальные</button>
+    <button class="filter-btn" data-filter="open">Open source</button>
+    <button class="filter-btn" data-filter="lecture">Увидим на лекции</button>
+  </div>
+
+  <!-- LLM -->
+  <div class="category cat-llm" data-category="llm">
+    <div class="category-header">
+      <div class="category-dot"></div>
+      <div class="category-title">Языковые модели (LLM)</div>
+    </div>
+    <div class="cards-grid">
+
+      <div class="card" data-tags="llm lecture" onclick="toggleCard(this)">
+        <div class="card-top">
+          <div>
+            <div class="card-name">ChatGPT</div>
+            <div class="card-company">OpenAI · GPT-5.4 Thinking / Instant / Pro</div>
+          </div>
+          <span class="card-arrow">▾</span>
+        </div>
+        <div class="card-oneliner">Самый известный. Универсальный: тексты, рассуждения, изображения, поиск, голос.</div>
+        <div class="card-tags">
+          <span class="tag">тексты</span>
+          <span class="tag">рисёрч</span>
+          <span class="tag">изображения</span>
+          <span class="tag">код</span>
+        </div>
+        <div class="card-details">
+          <div class="card-details-inner">
+            <div class="detail-section">
+              <div class="detail-label">Сильные стороны</div>
+              <div class="detail-text">Широчайший спектр задач. Три режима в одном интерфейсе: Instant (быстрые ответы), Thinking (глубокие рассуждения), Pro (максимальное качество). Генерация изображений, поиск в интернете, анализ файлов и картинок, голосовой режим. Огромная экосистема — больше всего обучающих материалов и интеграций.</div>
+            </div>
+            <div class="detail-section">
+              <span class="price-tag price-paid">~$20/мес (Plus)</span>
+            </div>
+            <div class="lecture-badge">Увидим на лекции</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card" data-tags="llm lecture" onclick="toggleCard(this)">
+        <div class="card-top">
+          <div>
+            <div class="card-name">Claude</div>
+            <div class="card-company">Anthropic · Opus 4.6 / Sonnet 4.6 / Haiku 4.5</div>
+          </div>
+          <span class="card-arrow">▾</span>
+        </div>
+        <div class="card-oneliner">Длинный контекст, артефакты, проекты. Сильнейший в работе с документами и кодом.</div>
+        <div class="card-tags">
+          <span class="tag">документы</span>
+          <span class="tag">код</span>
+          <span class="tag">артефакты</span>
+          <span class="tag">проекты</span>
+        </div>
+        <div class="card-details">
+          <div class="card-details-inner">
+            <div class="detail-section">
+              <div class="detail-label">Сильные стороны</div>
+              <div class="detail-text">Создание файлов и визуализаций прямо в чате (артефакты — HTML, PDF, код). Режим Projects — рабочее пространство с постоянными инструкциями и загруженными файлами. Отличная работа с длинными текстами. Поиск в интернете, память между чатами.</div>
+            </div>
+            <div class="detail-section">
+              <span class="price-tag price-paid">~$20/мес (Pro)</span>
+            </div>
+            <div class="lecture-badge">Увидим на лекции</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card" data-tags="llm lecture" onclick="toggleCard(this)">
+        <div class="card-top">
+          <div>
+            <div class="card-name">Gemini</div>
+            <div class="card-company">Google · 3.1 Pro / 3 Flash</div>
+          </div>
+          <span class="card-arrow">▾</span>
+        </div>
+        <div class="card-oneliner">Встроен в Google-экосистему. Генерирует изображения с текстом на русском.</div>
+        <div class="card-tags">
+          <span class="tag">Google Docs</span>
+          <span class="tag">изображения</span>
+          <span class="tag">русский текст</span>
+        </div>
+        <div class="card-details">
+          <div class="card-details-inner">
+            <div class="detail-section">
+              <div class="detail-label">Сильные стороны</div>
+              <div class="detail-text">Работает прямо внутри Google Docs, Sheets, Gmail — редактирует документы в реальном времени. Генерация изображений с текстом на русском (Nano Banana 2). Контекстное окно до 1M токенов. Deep Research для глубоких исследований.</div>
+            </div>
+            <div class="detail-section">
+              <span class="price-tag price-paid">~$20/мес (Google AI Pro)</span>
+            </div>
+            <div class="lecture-badge">Увидим на лекции</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card" data-tags="llm" onclick="toggleCard(this)">
+        <div class="card-top">
+          <div>
+            <div class="card-name">Grok</div>
+            <div class="card-company">xAI · Grok 4.1</div>
+          </div>
+          <span class="card-arrow">▾</span>
+        </div>
+        <div class="card-oneliner">Интегрирован в X (Twitter). Сильное рассуждение, генерация изображений и видео.</div>
+        <div class="card-tags">
+          <span class="tag">рассуждение</span>
+          <span class="tag">голос</span>
+          <span class="tag">X/Twitter</span>
+        </div>
+        <div class="card-details">
+          <div class="card-details-inner">
+            <div class="detail-section">
+              <div class="detail-label">Сильные стороны</div>
+              <div class="detail-text">Контекст до 1M токенов. Голосовой режим с низкой задержкой. Генерация изображений и видео (Grok Imagine). Доступ к данным X в реальном времени. По рейтингам — стабильно в тройке-четвёрке лучших моделей.</div>
+            </div>
+            <div class="detail-section">
+              <span class="price-tag price-paid">~$30/мес (SuperGrok)</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Specialized -->
+  <div class="category cat-specialized" data-category="specialized">
+    <div class="category-header">
+      <div class="category-dot"></div>
+      <div class="category-title">Специализированные инструменты</div>
+    </div>
+    <div class="cards-grid">
+
+      <div class="card" data-tags="specialized lecture" onclick="toggleCard(this)">
+        <div class="card-top">
+          <div>
+            <div class="card-name">NotebookLM</div>
+            <div class="card-company">Google</div>
+          </div>
+          <span class="card-arrow">▾</span>
+        </div>
+        <div class="card-oneliner">Загружаете свои материалы — работаете только с ними. Не галлюцинирует. Создаёт подкасты.</div>
+        <div class="card-tags">
+          <span class="tag">самообразование</span>
+          <span class="tag">источники</span>
+          <span class="tag">подкасты</span>
+        </div>
+        <div class="card-details">
+          <div class="card-details-inner">
+            <div class="detail-section">
+              <div class="detail-label">Что это</div>
+              <div class="detail-text">Загружаете PDF, статьи, книги — задаёте вопросы, и модель отвечает только на основе ваших документов. Умеет создавать аудио-подкасты по загруженным материалам. Базовая версия бесплатна, расширенная — в составе Google AI Pro.</div>
+            </div>
+            <div class="detail-section">
+              <span class="price-tag price-free">Бесплатно (базовая)</span>
+            </div>
+            <div class="lecture-badge">Увидим на лекции</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card" data-tags="specialized" onclick="toggleCard(this)">
+        <div class="card-top">
+          <div>
+            <div class="card-name">Perplexity</div>
+            <div class="card-company">Perplexity AI</div>
+          </div>
+          <span class="card-arrow">▾</span>
+        </div>
+        <div class="card-oneliner">ИИ-поисковик: структурированные ответы со ссылками на источники.</div>
+        <div class="card-tags">
+          <span class="tag">поиск</span>
+          <span class="tag">источники</span>
+          <span class="tag">факты</span>
+        </div>
+        <div class="card-details">
+          <div class="card-details-inner">
+            <div class="detail-section">
+              <div class="detail-label">Что это</div>
+              <div class="detail-text">Альтернатива Google для быстрого поиска с ответом. Ищет в интернете, даёт структурированный результат со ссылками. Удобно для проверки фактов и поиска исследований.</div>
+            </div>
+            <div class="detail-section">
+              <span class="price-tag price-free">Бесплатная версия / $20 Pro</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Media -->
+  <div class="category cat-media" data-category="media">
+    <div class="category-header">
+      <div class="category-dot"></div>
+      <div class="category-title">Медиа и дизайн</div>
+    </div>
+    <div class="cards-grid">
+
+      <div class="card" data-tags="media" onclick="toggleCard(this)">
+        <div class="card-top">
+          <div>
+            <div class="card-name">Midjourney</div>
+            <div class="card-company">Midjourney Inc.</div>
+          </div>
+          <span class="card-arrow">▾</span>
+        </div>
+        <div class="card-oneliner">Генерация изображений высочайшего качества. Фотореализм, арт, иллюстрации.</div>
+        <div class="card-tags">
+          <span class="tag">изображения</span>
+          <span class="tag">дизайн</span>
+          <span class="tag">арт</span>
+        </div>
+        <div class="card-details">
+          <div class="card-details-inner">
+            <div class="detail-section">
+              <div class="detail-label">Что это</div>
+              <div class="detail-text">Один из лучших генераторов изображений. Работает через веб-интерфейс. Отлично для иллюстраций, обложек, визуалов. С текстом на русском пока плохо — для этого лучше Gemini.</div>
+            </div>
+            <div class="detail-section">
+              <span class="price-tag price-paid">от $10/мес</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card" data-tags="media lecture" onclick="toggleCard(this)">
+        <div class="card-top">
+          <div>
+            <div class="card-name">Генерация видео</div>
+            <div class="card-company">Runway · Kling · Sora · Grok Imagine</div>
+          </div>
+          <span class="card-arrow">▾</span>
+        </div>
+        <div class="card-oneliner">Видео из текста или фотографий. Быстро развивающаяся область.</div>
+        <div class="card-tags">
+          <span class="tag">видео</span>
+          <span class="tag">анимация</span>
+          <span class="tag">фото→видео</span>
+        </div>
+        <div class="card-details">
+          <div class="card-details-inner">
+            <div class="detail-section">
+              <div class="detail-label">Что это</div>
+              <div class="detail-text">Создание коротких видео из текстового описания или фотографий. Качество растёт каждый месяц. Несколько конкурирующих платформ — Runway, Kling, Sora (OpenAI), Veo (Google), Grok Imagine (xAI). Стоит попробовать несколько и выбрать под задачу.</div>
+            </div>
+            <div class="detail-section">
+              <span class="price-tag price-paid">от $12/мес</span>
+            </div>
+            <div class="lecture-badge">Увидим на лекции</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Local -->
+  <div class="category cat-local" data-category="local">
+    <div class="category-header">
+      <div class="category-dot"></div>
+      <div class="category-title">Локальные и приватные</div>
+    </div>
+    <div class="cards-grid">
+
+      <div class="card" data-tags="local lecture" onclick="toggleCard(this)">
+        <div class="card-top">
+          <div>
+            <div class="card-name">Whisper</div>
+            <div class="card-company">OpenAI · распознавание речи</div>
+          </div>
+          <span class="card-arrow">▾</span>
+        </div>
+        <div class="card-oneliner">Аудио → текст. Работает локально — данные никуда не уходят.</div>
+        <div class="card-tags">
+          <span class="tag">аудио→текст</span>
+          <span class="tag">локально</span>
+          <span class="tag">приватность</span>
+        </div>
+        <div class="card-details">
+          <div class="card-details-inner">
+            <div class="detail-section">
+              <div class="detail-label">Что это</div>
+              <div class="detail-text">Модель распознавания речи, которую можно запустить на своём компьютере. Качество на уровне коммерческих сервисов. Поддерживает десятки языков, включая русский. Данные не покидают ваш компьютер.</div>
+            </div>
+            <div class="detail-section">
+              <span class="price-tag price-free">Бесплатно (open source)</span>
+            </div>
+            <div class="lecture-badge">Увидим на лекции</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card" data-tags="local lecture" onclick="toggleCard(this)">
+        <div class="card-top">
+          <div>
+            <div class="card-name">Ollama / LM Studio</div>
+            <div class="card-company">Open source · запуск LLM локально</div>
+          </div>
+          <span class="card-arrow">▾</span>
+        </div>
+        <div class="card-oneliner">Языковые модели на вашем компьютере. Полная конфиденциальность данных.</div>
+        <div class="card-tags">
+          <span class="tag">локально</span>
+          <span class="tag">приватность</span>
+          <span class="tag">LLM</span>
+        </div>
+        <div class="card-details">
+          <div class="card-details-inner">
+            <div class="detail-section">
+              <div class="detail-label">Что это</div>
+              <div class="detail-text">Программы для запуска языковых моделей (Llama, DeepSeek, Qwen и др.) на вашем компьютере. Данные никуда не уходят. Качество ниже облачных моделей, но для многих задач достаточно. Ollama — командная строка, LM Studio — с графическим интерфейсом.</div>
+            </div>
+            <div class="detail-section">
+              <span class="price-tag price-free">Бесплатно (open source)</span>
+            </div>
+            <div class="lecture-badge">Увидим на лекции</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Open source -->
+  <div class="category cat-open" data-category="open">
+    <div class="category-header">
+      <div class="category-dot"></div>
+      <div class="category-title">Open source модели</div>
+    </div>
+    <div class="cards-grid">
+
+      <div class="card" data-tags="open" onclick="toggleCard(this)">
+        <div class="card-top">
+          <div>
+            <div class="card-name">DeepSeek</div>
+            <div class="card-company">DeepSeek · R1 / V3.2</div>
+          </div>
+          <span class="card-arrow">▾</span>
+        </div>
+        <div class="card-oneliner">Китайская модель. Очень дешёвая, сильная в математике и коде. Доступна как API и open source.</div>
+        <div class="card-tags">
+          <span class="tag">рассуждение</span>
+          <span class="tag">код</span>
+          <span class="tag">дешёвая</span>
+          <span class="tag">open source</span>
+        </div>
+        <div class="card-details">
+          <div class="card-details-inner">
+            <div class="detail-section">
+              <div class="detail-label">Что это</div>
+              <div class="detail-text">Серия моделей из Китая, которые конкурируют с GPT и Claude при значительно меньших затратах. R1 — модель рассуждения для сложных задач. Можно использовать через API или запускать локально. Есть вопросы о безопасности данных и влиянии китайского правительства.</div>
+            </div>
+            <div class="detail-section">
+              <span class="price-tag price-free">API от $0.55/M токенов · open source</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card" data-tags="open" onclick="toggleCard(this)">
+        <div class="card-top">
+          <div>
+            <div class="card-name">Llama 4</div>
+            <div class="card-company">Meta · Scout / Maverick</div>
+          </div>
+          <span class="card-arrow">▾</span>
+        </div>
+        <div class="card-oneliner">Открытые модели от Meta. Scout — контекст до 10 миллионов токенов.</div>
+        <div class="card-tags">
+          <span class="tag">open source</span>
+          <span class="tag">мультимодальные</span>
+          <span class="tag">огромный контекст</span>
+        </div>
+        <div class="card-details">
+          <div class="card-details-inner">
+            <div class="detail-section">
+              <div class="detail-label">Что это</div>
+              <div class="detail-text">Открытые модели от Meta. Llama 4 Scout — рекордное контекстное окно в 10M токенов (~7500 страниц). Maverick — универсальная модель с 1M контекстом. Мультимодальные: текст, изображения, видео. Можно запускать локально через Ollama.</div>
+            </div>
+            <div class="detail-section">
+              <span class="price-tag price-free">Бесплатно (open weights)</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card" data-tags="open" onclick="toggleCard(this)">
+        <div class="card-top">
+          <div>
+            <div class="card-name">Qwen 3</div>
+            <div class="card-company">Alibaba</div>
+          </div>
+          <span class="card-arrow">▾</span>
+        </div>
+        <div class="card-oneliner">Китайская модель от Alibaba. 119 языков, Apache 2.0 лицензия. Сильна в мультиязычных задачах.</div>
+        <div class="card-tags">
+          <span class="tag">open source</span>
+          <span class="tag">мультиязычная</span>
+          <span class="tag">119 языков</span>
+        </div>
+        <div class="card-details">
+          <div class="card-details-inner">
+            <div class="detail-section">
+              <div class="detail-label">Что это</div>
+              <div class="detail-text">Семейство моделей от Alibaba: от компактных (4B параметров) до огромных (235B+). Поддерживает 119 языков. Apache 2.0 лицензия — можно использовать свободно. Модели для текста, зрения (Qwen-VL), аудио и кода.</div>
+            </div>
+            <div class="detail-section">
+              <span class="price-tag price-free">Бесплатно (Apache 2.0)</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="footer">
+    актуально на март 2026 · ландшафт меняется быстро
+  </div>
+</div>
+
+<script>
+  function toggleCard(card) { card.classList.toggle('expanded'); }
+
+  document.querySelectorAll('.filter-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      const f = btn.dataset.filter;
+
+      if (f === 'all') {
+        document.querySelectorAll('.card').forEach(c => c.classList.remove('hidden'));
+        document.querySelectorAll('.category').forEach(c => c.classList.remove('hidden'));
+        return;
+      }
+
+      if (f === 'lecture') {
+        document.querySelectorAll('.card').forEach(c => {
+          c.classList.toggle('hidden', !(c.dataset.tags || '').includes('lecture'));
+        });
+      } else {
+        document.querySelectorAll('.card').forEach(c => {
+          c.classList.toggle('hidden', !(c.dataset.tags || '').includes(f));
+        });
+      }
+
+      document.querySelectorAll('.category').forEach(cat => {
+        cat.classList.toggle('hidden', cat.querySelectorAll('.card:not(.hidden)').length === 0);
+      });
+    });
+  });
+</script>
+
+</body>
+</html>
